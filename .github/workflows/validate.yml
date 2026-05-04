@@ -1,0 +1,33 @@
+name: Validate Schemas
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  validate:
+    name: Validate example payloads against JSON Schemas
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install AJV CLI
+        run: npm install --global ajv-cli@5
+
+      - name: Validate vitals v2.0 example
+        run: |
+          ajv validate \
+            --spec=draft7 \
+            -s schemas/vitals/v2.0.json \
+            -d examples/vitals/v2.0.example.json
