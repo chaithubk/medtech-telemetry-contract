@@ -42,19 +42,23 @@ pattern: schema → example → doc.
 - Each schema lives at a **fixed, immutable path** (e.g. `schemas/vitals/v2.0.json`).
 - Breaking changes introduce a new file (`v2.1.json`, `v3.0.json`), **never** mutate an existing one.
 - Releases are tagged: `vitals/v2.0`, `vitals/v2.1`, etc.
-- Consumers should pin to a **git tag** (recommended) or a specific commit SHA.
+- Consumers should pin to a **specific commit SHA** for immutable builds (Yocto),
+  and may also track the corresponding human-readable tag for release notes.
 
 ---
 
 ## Consuming a Contract
 
-### Option A — Pin by git tag (recommended for all environments)
+### Option A — Pin by commit SHA (recommended for immutable environments like Yocto)
 
 ```bash
-# Add as a git submodule pinned to the vitals/v2.0 tag
+# Add as a git submodule pinned to an immutable commit SHA
 git submodule add https://github.com/chaithubk/medtech-telemetry-contract contracts/telemetry
-cd contracts/telemetry && git checkout vitals/v2.0
+cd contracts/telemetry && git checkout <commit-sha>
 ```
+
+For human-readable contract reporting, maintain a version marker (for example,
+`v2.0.0`) alongside your pinned commit in downstream packaging metadata.
 
 ### Option B — Vendor (copy) the schema file
 
@@ -109,3 +113,9 @@ ensures that the example and the schema never diverge.
 4. The CI will automatically validate the example against the schema.
 5. Open a PR; tag it `schema:<domain>` for easy discovery.
 6. After merge, create a git tag: `git tag <domain>/vX.Y && git push --tags`.
+
+---
+
+## License
+
+This project is licensed under **Apache-2.0**. See [`LICENSE`](./LICENSE).
