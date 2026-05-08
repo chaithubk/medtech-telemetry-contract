@@ -14,14 +14,17 @@ medtech-telemetry-contract/
 ├── schemas/
 │   └── vitals/
 │       └── v2.0.json          # JSON Schema — vitals payload v2.0
+│       └── v2.1.json          # JSON Schema — vitals payload v2.1 (if present)
 ├── examples/
 │   └── vitals/
 │       └── v2.0.example.json  # Canonical example payload for v2.0
+│       └── v2.1.example.json  # Canonical example payload for v2.1 (if present)
 ├── docs/
 │   └── vitals-v2.0.md         # Human-readable field docs, units, invariants
 └── .github/
     └── workflows/
         └── validate.yml       # CI: validates every example against its schema
+        └── release.yml        # CI: workflow to tag and release new schema versions
 ```
 
 Future contracts (e.g. `schemas/predictions/sepsis/v1.0.json`) follow the same
@@ -39,11 +42,11 @@ pattern: schema → example → doc.
 
 ## Versioning Policy
 
-- Each schema lives at a **fixed, immutable path** (e.g. `schemas/vitals/v2.0.json`).
-- Breaking changes introduce a new file (`v2.1.json`, `v3.0.json`), **never** mutate an existing one.
-- Releases are tagged: `vitals/v2.0`, `vitals/v2.1`, etc.
-- Consumers should pin to a **specific commit SHA** for immutable builds (Yocto),
-  and may also track the corresponding human-readable tag for release notes.
+
+- **Versioned filenames:** Each schema and example file is named with its version (e.g. `v2.0.json`, `v2.1.json`). When a new version is released, create new files with the updated version in the filename. Do not overwrite or mutate existing versioned files.
+- **Immutable contracts:** Never change a published schema file. Breaking changes require a new versioned file (e.g. `v2.1.json`, `v3.0.json`).
+- **Release workflow:** Use the `release.yml` GitHub Actions workflow to tag and release new schema versions. Tags should match the version (e.g. `vitals/v2.1`).
+- **Pinning:** Consumers should pin to a specific commit SHA for immutable builds (e.g. Yocto), and may also track the corresponding tag for release notes.
 
 ---
 
@@ -98,10 +101,17 @@ function validateVitals(payload) {
 
 ## CI Validation
 
-Every push and pull-request runs `.github/workflows/validate.yml`, which uses
-[AJV CLI](https://github.com/ajv-validator/ajv-cli) to validate every example
-payload in `examples/` against its corresponding schema in `schemas/`. This
-ensures that the example and the schema never diverge.
+
+### CI Validation
+
+Every push and pull-request runs `.github/workflows/validate.yml`, which uses [AJV CLI](https://github.com/ajv-validator/ajv-cli) to validate every example payload in `examples/` against its corresponding schema in `schemas/`. The workflow automatically checks all versioned schemas and examples, ensuring that the example and the schema never diverge.
+
+### Release Workflow
+
+To release a new schema version:
+1. Add new versioned schema and example files (e.g. `v2.1.json`, `v2.1.example.json`).
+2. Run the `release.yml` workflow from the GitHub Actions tab, specifying the new version (e.g. `v2.1`).
+3. The workflow will tag the release and create a GitHub Release entry.
 
 ---
 
