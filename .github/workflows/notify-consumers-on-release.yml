@@ -1,0 +1,41 @@
+name: Notify consumers on contract release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  notify-consumers:
+    runs-on: ubuntu-latest
+    strategy:
+      # Continue even if one dispatch fails; don't cascade block all consumers
+      fail-fast: false
+      matrix:
+        # Add more consumer repos as they migrate to this model
+        consumer:
+          - owner: chaithubk
+            repo: medtech-vitals-publisher
+    steps:
+      - name: Dispatch contract-release-published to ${{ matrix.consumer.owner }}/${{ matrix.consumer.repo }}
+        env:
+          GH_TOKEN: ${{ secrets.CONSUMER_DISPATCH_TOKEN }}
+          CONSUMER_OWNER: ${{ matrix.consumer.owner }}
+          CONSUMER_REPO: ${{ matrix.consumer.repo }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          echo "Notifying $CONSUMER_OWNER/$CONSUMER_REPO of release $TAG"
+          gh api repos/$CONSUMER_OWNER/$CONSUMER_REPO/dispatches \
+            -X POST \
+            -f event_type=contract-release-published \
+            -f client_payload[tag]="$TAG" \
+            --input - <<EOF
+          {}
+          EOF
+          echo "Dispatch sent successfully"
+
+      - name: Log dispatch result
+        if: always()
+        run: |
+          echo "Release tag: ${{ github.event.release.tag_name }}"
+          echo "Release URL: ${{ github.event.release.html_url }}"
+          echo "Dispatch payload: event_type=contract-release-published, tag=${{ github.event.release.tag_name }}"
