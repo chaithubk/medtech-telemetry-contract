@@ -1,5 +1,5 @@
 {
-  "version": "2.0",
+  "version": "2.1.0",
   "patient_id": "patient-001",
   "scenario": "sepsis",
   "scenario_stage": "sepsis_onset",
