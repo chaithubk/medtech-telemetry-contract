@@ -3,10 +3,23 @@ name: Notify consumers on contract release
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      test_tag:
+        description: "Simulated release tag for test runs (for example: v2.1.4)"
+        required: true
+        type: string
+      dry_run:
+        description: "When true, do not dispatch to consumer repos; log only"
+        required: false
+        type: boolean
+        default: true
 
 jobs:
   notify-consumers:
     runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.test_tag }}
     strategy:
       fail-fast: false
       matrix:
@@ -14,12 +27,24 @@ jobs:
           - owner: chaithubk
             repo: medtech-vitals-publisher
     steps:
+      - name: Validate tag input
+        run: |
+          if [ -z "$TAG" ]; then
+            echo "::error::Tag is empty. Provide workflow_dispatch input 'test_tag' or run on release event."
+            exit 1
+          fi
+
+      - name: Dry run notice
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        run: |
+          echo "::warning::Dry run enabled. No consumer dispatches will be sent."
+
       - name: Dispatch contract-release-published to ${{ matrix.consumer.owner }}/${{ matrix.consumer.repo }}
+        if: ${{ github.event_name != 'workflow_dispatch' || !inputs.dry_run }}
         env:
           GH_TOKEN: ${{ secrets.CONSUMER_DISPATCH_TOKEN }}
           CONSUMER_OWNER: ${{ matrix.consumer.owner }}
           CONSUMER_REPO: ${{ matrix.consumer.repo }}
-          TAG: ${{ github.event.release.tag_name }}
         run: |
           echo "Notifying $CONSUMER_OWNER/$CONSUMER_REPO of release $TAG"
           gh api repos/$CONSUMER_OWNER/$CONSUMER_REPO/dispatches \
@@ -31,5 +56,6 @@ jobs:
       - name: Log dispatch result
         if: always()
         run: |
-          echo "Release tag: ${{ github.event.release.tag_name }}"
-          echo "Release URL: ${{ github.event.release.html_url }}"
+          echo "Event name: ${{ github.event_name }}"
+          echo "Release tag: $TAG"
+          echo "Release URL: ${{ github.event.release.html_url || 'n/a (workflow_dispatch)' }}"

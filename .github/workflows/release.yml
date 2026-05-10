@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -52,6 +53,17 @@ jobs:
         if: ${{ inputs.test_mode }}
         run: |
           echo "::warning::Running in test_mode=true. Governance checks, tag creation, and GitHub release steps are skipped."
+
+      - name: Trigger notify workflow (test mode)
+        if: ${{ inputs.test_mode }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run notify-consumers-on-release.yml \
+            --ref "${{ github.ref_name }}" \
+            -f test_tag="${{ steps.read_version.outputs.tag }}" \
+            -f dry_run=false
+          echo "Triggered notify-consumers-on-release.yml with real dispatch for tag ${{ steps.read_version.outputs.tag }}"
 
       - name: Build release notes from changelog
         run: |
