@@ -8,10 +8,8 @@ jobs:
   notify-consumers:
     runs-on: ubuntu-latest
     strategy:
-      # Continue even if one dispatch fails; don't cascade block all consumers
       fail-fast: false
       matrix:
-        # Add more consumer repos as they migrate to this model
         consumer:
           - owner: chaithubk
             repo: medtech-vitals-publisher
@@ -27,15 +25,11 @@ jobs:
           gh api repos/$CONSUMER_OWNER/$CONSUMER_REPO/dispatches \
             -X POST \
             -f event_type=contract-release-published \
-            -f client_payload[tag]="$TAG" \
-            --input - <<EOF
-          {}
-          EOF
-          echo "Dispatch sent successfully"
+            -f client_payload[tag]="$TAG"
+          echo "✓ Dispatch sent successfully"
 
       - name: Log dispatch result
         if: always()
         run: |
           echo "Release tag: ${{ github.event.release.tag_name }}"
           echo "Release URL: ${{ github.event.release.html_url }}"
-          echo "Dispatch payload: event_type=contract-release-published, tag=${{ github.event.release.tag_name }}"
