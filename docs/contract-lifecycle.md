@@ -41,3 +41,7 @@ Consumers should:
 - pin to release tag or commit SHA
 - vendor canonical schema path
 - monitor changelog compatibility class before upgrading
+
+## Related ADRs
+
+- `docs/adr/0001-canonical-semver-and-notify-automation.md`

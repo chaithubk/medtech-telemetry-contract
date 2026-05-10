@@ -118,3 +118,9 @@ git diff v2.0.0..v2.1.0 -- schemas/vitals/vitals.schema.json
 ## License
 
 This project is licensed under Apache-2.0. See [LICENSE](LICENSE).
+
+## Architecture Decision Records (ADRs)
+
+Key design and governance decisions are documented as ADRs:
+
+- [Canonical Schema Versioning and Automated Consumer Notification](docs/adr/0001-canonical-semver-and-notify-automation.md)
