@@ -1,36 +1,62 @@
-name: Release Revision
+name: Release Contract
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to release (e.g. v2.1)'
-        required: true
-        type: string
 
 jobs:
-  bump-version:
+  release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Read release version
+        id: read_version
+        run: |
+          VERSION=$(cat VERSION | tr -d '[:space:]')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Validate SemVer tag does not already exist
+        run: |
+          TAG="${{ steps.read_version.outputs.tag }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "::error::Tag $TAG already exists"
+            exit 1
+          fi
+
+      - name: Validate changelog and governance
+        run: |
+          LATEST_TAG=$(git tag -l "v*" --sort=-v:refname | head -n1)
+          python3 scripts/compatibility_guard.py --base-tag "$LATEST_TAG"
+
+      - name: Build release notes from changelog
+        run: |
+          python3 scripts/extract_release_notes.py --version "${{ steps.read_version.outputs.version }}" --output release-notes.md
 
       - name: Set up Git
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-      - name: Bump revision and tag
+      - name: Create and push tag
         run: |
-          VERSION=${{ github.event.inputs.version }}
-          git tag $VERSION
-          git push origin $VERSION
+          TAG="${{ steps.read_version.outputs.tag }}"
+          git tag "$TAG"
+          git push origin "$TAG"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.version }}
-          name: Release ${{ github.event.inputs.version }}
-          generate_release_notes: true
+          tag_name: ${{ steps.read_version.outputs.tag }}
+          name: MedTech Telemetry Contract ${{ steps.read_version.outputs.tag }}
+          body_path: release-notes.md
