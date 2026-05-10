@@ -1,7 +1,14 @@
 name: Release Contract
+run-name: Release Contract${{ inputs.test_mode && ' [TEST MODE]' || '' }}
 
 on:
   workflow_dispatch:
+    inputs:
+      test_mode:
+        description: "Run workflow for testing only (skip governance and release side effects)"
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   release:
@@ -27,6 +34,7 @@ jobs:
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Validate SemVer tag does not already exist
+        if: ${{ !inputs.test_mode }}
         run: |
           TAG="${{ steps.read_version.outputs.tag }}"
           if git rev-parse "$TAG" >/dev/null 2>&1; then
@@ -35,9 +43,15 @@ jobs:
           fi
 
       - name: Validate changelog and governance
+        if: ${{ !inputs.test_mode }}
         run: |
           LATEST_TAG=$(git tag -l "v*" --sort=-v:refname | head -n1)
           python3 scripts/compatibility_guard.py --base-tag "$LATEST_TAG"
+
+      - name: Test mode notice
+        if: ${{ inputs.test_mode }}
+        run: |
+          echo "::warning::Running in test_mode=true. Governance checks, tag creation, and GitHub release steps are skipped."
 
       - name: Build release notes from changelog
         run: |
@@ -49,12 +63,14 @@ jobs:
           git config user.email "github-actions@github.com"
 
       - name: Create and push tag
+        if: ${{ !inputs.test_mode }}
         run: |
           TAG="${{ steps.read_version.outputs.tag }}"
           git tag "$TAG"
           git push origin "$TAG"
 
       - name: Create GitHub Release
+        if: ${{ !inputs.test_mode }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.read_version.outputs.tag }}
